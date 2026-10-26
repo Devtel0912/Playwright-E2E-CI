@@ -4,7 +4,7 @@
   "description": "End-to-end browser testing with Playwright, JavaScript, Docker, and Jenkins CI/CD",
   "main": "index.js",
   "scripts": {
-    "test":  "playwright test"
+    "test": "playwright test"
   },
   "repository": {
     "type": "git",
@@ -19,6 +19,6 @@
   },
   "homepage": "https://github.com/Devtel0912/Playwright-E2E-CI#readme",
   "devDependencies": {
-    "@playwright/test": "^1.64.1"
+    "@playwright/test": "1.64.1"
   }
 }
