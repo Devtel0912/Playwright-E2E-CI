@@ -1,67 +1,55 @@
-pipeline {
-    
-    agent any
 
-    options {
-        timestamps()
-        timeout(time: 15, unit: 'MINUTES')
+pipeline {
+    agent {
+        label 'windows-cypress-agent'
     }
 
-    environment {
-        CI = 'true'
+    options {
+        timeout(time: 20, unit: 'MINUTES')
+        timestamps()
     }
 
     stages {
-        stage('Playwright') {
-            agent {
-                docker {
-                    // Keep this tag in sync with the @playwright/test version in package.json
-                    image 'mcr.microsoft.com/playwright:v1.64.1-noble'
-                    args '--ipc=host'
-                    reuseNode true
-                }
+        stage('Check Environment') {
+            steps {
+                bat 'node --version'
+                bat 'npm --version'
             }
+        }
 
-            environment {
-                // Jenkins runs the container as the Jenkins user, which has no writable home
-                HOME = "${WORKSPACE}"
-                npm_config_cache = "${WORKSPACE}/.npm"
+        stage('Install Dependencies') {
+            steps {
+                bat 'npm ci'
             }
+        }
 
-            stages {
-                stage('Install Dependencies') {
-                    steps {
-                        sh '''
-                            node --version
-                            npm --version
-                            npm ci
-                            # Run after npm ci so this reports the project's Playwright, not a fresh npx download
-                            npx playwright --version
-                        '''
-                    }
-                }
+        stage('Install Playwright Browser') {
+            steps {
+                bat 'npx playwright install chromium'
+            }
+        }
 
-                stage('Run Playwright Tests') {
-                    steps {
-                        sh 'npx playwright test'
-                    }
-                }
+        stage('Run E2E Tests') {
+            steps {
+                bat 'npx playwright test --workers=1'
             }
         }
     }
 
     post {
         always {
-            junit allowEmptyResults: true, testResults: 'test-results/junit.xml'
-            archiveArtifacts artifacts: 'playwright-report/**, test-results/**', allowEmptyArchive: true
+            archiveArtifacts(
+                artifacts: 'playwright-report/**,test-results/**',
+                allowEmptyArchive: true
+            )
         }
 
         success {
-            echo 'SUCCESS: All Playwright tests passed!'
+            echo 'Playwright E2E tests passed!'
         }
 
         failure {
-            echo 'FAILED: Check the stage logs for the error.'
+            echo 'Playwright E2E tests failed. Review the console output.'
         }
     }
 }
