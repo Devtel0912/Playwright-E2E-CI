@@ -1,0 +1,27 @@
+# Runs the Jenkins controller from ./Dockerfile with access to the host Docker engine,
+# so the Jenkinsfile can start the Playwright image with `agent { docker { ... } }`.
+#
+#   docker compose -f jenkins/docker-compose.yml up -d --build
+services:
+  jenkins:
+    build: .
+    image: jenkins-docker:lts-jdk21
+    container_name: jenkins
+    restart: unless-stopped
+    # The Docker socket is owned by root inside the container; joining group 0
+    # lets the jenkins user talk to it without running Jenkins as root.
+    group_add:
+      - "0"
+    ports:
+      - "8081:8080"
+      - "50000:50000"
+    volumes:
+      # Must be a named volume: the Docker plugin shares it with the Playwright
+      # container via --volumes-from, so both see the same workspace path.
+      - jenkins_home:/var/jenkins_home
+      - /var/run/docker.sock:/var/run/docker.sock
+
+volumes:
+  jenkins_home:
+    # Reuse the existing volume so jobs, plugins and credentials are kept
+    external: true
